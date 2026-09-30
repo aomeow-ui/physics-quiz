@@ -148,18 +148,18 @@ for (const file of files) {
 }
 
 /* --------------------------------------------------------------- 输出 */
-if (all.length) {
-  const header = `/* 自动生成，请勿直接编辑。\n`
-    + `   源文件：data/bank-*.json\n`
-    + `   重新生成：node tools/build-bank.mjs\n`
-    + `   生成时间：${new Date().toISOString()}\n`
-    + `   题目总数：${all.length}\n*/\n`;
-  // App 运行时加载的就是这个文件：压缩输出以减小体积与解析时间
-  const payload = 'window.PHYSICS_BANK = ' + JSON.stringify(all) + ';\n';
-  writeFileSync(join(DATA, 'questions.js'), header + payload, 'utf8');
-  // 另一个是给人看的版本，保留缩进
-  writeFileSync(join(DATA, 'questions.json'), JSON.stringify(all, null, 2) + '\n', 'utf8');
-}
+// 注意：即使题目为 0 也要写出文件。否则题库被清空后，旧的 questions.js 会留在原地，
+// App 仍然加载得到老题目 —— 也就是「删不掉」。
+const header = `/* 自动生成，请勿直接编辑。\n`
+  + `   源文件：data/bank-*.json\n`
+  + `   重新生成：node tools/build-bank.mjs\n`
+  + `   生成时间：${new Date().toISOString()}\n`
+  + `   题目总数：${all.length}\n*/\n`;
+// App 运行时加载的就是这个文件：压缩输出以减小体积与解析时间
+const payload = 'window.PHYSICS_BANK = ' + JSON.stringify(all) + ';\n';
+writeFileSync(join(DATA, 'questions.js'), header + payload, 'utf8');
+// 另一个是给人看的版本，保留缩进
+writeFileSync(join(DATA, 'questions.json'), JSON.stringify(all, null, 2) + '\n', 'utf8');
 
 /* --------------------------------------------------------------- 报告 */
 const by = (fn) => {
@@ -171,23 +171,31 @@ const by = (fn) => {
 console.log('\n===== 题库构建报告 =====');
 console.log(`分卷文件：${files.join(', ')}`);
 console.log(`题目总数：${all.length}`);
-console.log(`题型：${by(q => q.type === 'multiple' ? '多选' : '单选').map(([k, v]) => `${k} ${v}`).join('　')}`);
-console.log(`知识点：${by(q => q.topic).map(([k, v]) => `${k} ${v}`).join('　')}`);
-console.log(`来源类型：${by(q => q.sourceType).map(([k, v]) => `${k} ${v}`).join('　')}`);
-console.log(`难度分布：${by(q => '难度' + q.difficulty).map(([k, v]) => `${k} ${v}`).join('　')}`);
-console.log(`答案分布：${by(q => q.answer.join('')).slice(0, 12).map(([k, v]) => `${k}:${v}`).join('　')}`);
 
-// 各知识点单选题的答案字母分布：某字母占比过高会让学生靠"蒙"得分
-console.log('\n各知识点单选答案字母分布（理想情况四个字母大致均衡）：');
-for (const topic of [...new Set(all.map(q => q.topic))]) {
-  const singles = all.filter(q => q.topic === topic && q.type === 'single');
-  if (!singles.length) continue;
-  const c = { A: 0, B: 0, C: 0, D: 0 };
-  singles.forEach(q => { if (c[q.answer[0]] !== undefined) c[q.answer[0]] += 1; });
-  const max = Math.max(...Object.values(c));
-  const flag = singles.length >= 8 && max / singles.length > 0.45 ? '  ← 偏集中，建议调整选项顺序' : '';
-  console.log(`  ${topic.padEnd(6)} 单选 ${String(singles.length).padStart(2)} 题　` +
-    Object.keys(c).map(k => `${k}:${c[k]}`).join('　') + flag);
+if (all.length) {
+  console.log(`题型：${by(q => q.type === 'multiple' ? '多选' : '单选').map(([k, v]) => `${k} ${v}`).join('　')}`);
+  console.log(`知识点：${by(q => q.topic).map(([k, v]) => `${k} ${v}`).join('　')}`);
+  console.log(`来源类型：${by(q => q.sourceType).map(([k, v]) => `${k} ${v}`).join('　')}`);
+  console.log(`难度分布：${by(q => '难度' + q.difficulty).map(([k, v]) => `${k} ${v}`).join('　')}`);
+  console.log(`答案分布：${by(q => q.answer.join('')).slice(0, 12).map(([k, v]) => `${k}:${v}`).join('　')}`);
+
+  // 各知识点单选题的答案字母分布：某字母占比过高会让学生靠"蒙"得分
+  console.log('\n各知识点单选答案字母分布（理想情况四个字母大致均衡）：');
+  for (const topic of [...new Set(all.map(q => q.topic))]) {
+    const singles = all.filter(q => q.topic === topic && q.type === 'single');
+    if (!singles.length) continue;
+    const c = { A: 0, B: 0, C: 0, D: 0 };
+    singles.forEach(q => { if (c[q.answer[0]] !== undefined) c[q.answer[0]] += 1; });
+    const max = Math.max(...Object.values(c));
+    const flag = singles.length >= 8 && max / singles.length > 0.45 ? '  ← 偏集中，建议调整选项顺序' : '';
+    console.log(`  ${topic.padEnd(6)} 单选 ${String(singles.length).padStart(2)} 题　` +
+      Object.keys(c).map(k => `${k}:${c[k]}`).join('　') + flag);
+  }
+} else {
+  console.log('\n（题库当前为空，没有任何题目）');
+  console.log('往里加题的两种方式：');
+  console.log('  1. 直接编辑 data/bank-*.json（每个文件是一个题目数组），改完重跑本脚本；');
+  console.log('  2. 在 App 的「我的 → 题库管理」里粘贴试卷文本或 JSON，题目存在手机本机，不必重跑本脚本。');
 }
 
 if (warnings.length) {

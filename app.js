@@ -301,7 +301,7 @@
     var html = '';
     html += '<div class="hero">'
       + '<h2>高中物理 · 选择题</h2>'
-      + '<p>高考真题与真题改编 · 按知识点分类</p>'
+      + '<p>力学 · 电磁学 · 热学 · 光学 · 近代物理</p>'
       + '<div class="hero-stats">'
       + '<div class="hero-stat"><b>' + total + '</b><span>题库总题数</span></div>'
       + '<div class="hero-stat"><b>' + attempted + '</b><span>已练习</span></div>'
@@ -317,7 +317,7 @@
     }
 
     if (!total) {
-      html += '<div class="notice warn"><b>题库为空。</b>请在「我的 → 题库管理」中导入题目 JSON，或检查 <code>data/questions.js</code> 是否存在。</div>';
+      html += '<div class="notice warn"><b>题库为空。</b>到「我的 → 题库管理」里粘贴试卷文本或导入 JSON，就能开始刷题。</div>';
     }
 
     html += '<div class="sec-title">开始刷题</div>';
@@ -762,7 +762,13 @@
       + statCard(TOPICS.filter(function (t) { return state.bank.some(function (q) { return q.topic === t; }); }).length, '覆盖知识点')
       + '</div>';
 
-    html += '<div class="notice warn"><b>内置题库中「真题」为 0 题。</b>现有题目都是按高考真题的模型与考法编拟的模拟题，或依教材模型自编，未照录任何原卷。详见「使用说明 → 关于题目来源」。</div>';
+    if (!builtinN && !customN) {
+      html += '<div class="notice warn"><b>题库当前是空的。</b>用下面的「导入题目」粘贴试卷文本或 JSON，就能开始刷题。App 内置题库已清空，只保留了知识点分类框架。</div>';
+    } else if (!builtinN) {
+      html += '<div class="notice"><b>内置题库为空</b>，练习、错题与统计都只包含你自己导入的题目。</div>';
+    } else {
+      html += '<div class="notice warn"><b>内置题库中「真题」为 0 题。</b>现有题目都是按高考真题的模型与考法编拟的模拟题，或依教材模型自编，未照录任何原卷。详见「使用说明 → 关于题目来源」。</div>';
+    }
 
     html += '<div class="card">';
     html += '<div class="sec-title mt0">导入题目</div>';
@@ -1046,15 +1052,16 @@
       + '· <b>模拟题</b>：按高考真题的模型与考法编拟，不是原题；<br>'
       + '· <b>自编</b>：依教材典型模型自行命题；<br>'
       + '· <b>未标注</b>：你自己粘贴导入、还没写来源的题。<br><br>'
-      + '<b>本批内置题库中「真题」为 0 题。</b>现有题目都是按高考真题的模型与考法编拟（模拟题）或依教材模型自编（自编），<b>没有照录任何一份原卷</b>。整理时凡无法确认出处的，一律不标成「真题」，也不写具体年份卷别——宁可标低，不冒充原题。<br><br>'
-      + '题目内容由 AI 生成与整理，不是从任何题库网站抓取的作品。因此<b>正式用于考试、印发或对外发布前，请自行核对题目与解析</b>，尤其是数值题。<br><br>'
-      + '你若拿到能核实的历年原题，按模板导入并把 <code>sourceType</code> 写成 <code>"真题"</code> 即可，它会单独归类显示。</div></div>'
+      + '<b>App 自带的内置题库已清空（0 题）。</b>现在刷的题目全部来自你自己导入的内容，来源以你填写的 <code>sourceType</code> 为准。<br><br>'
+      + '整理题目时有一条原则：<b>凡无法确认出处的，一律不标成「真题」</b>，也不写具体的年份与卷别——宁可标低，不冒充原题。构建脚本 <code>tools/build-bank.mjs</code> 也会检查这一点：标了「真题」却写不出年份的，会直接提醒。<br><br>'
+      + '因此<b>正式用于考试、印发或对外发布前，请自行核对题目与解析</b>，尤其是需要计算的数值题。<br><br>'
+      + '导入能核实的历年原题时，把 <code>sourceType</code> 写成 <code>"真题"</code>，并在 <code>source</code> 里写清「年份 + 卷别 + 题号」，它会单独归类显示。</div></div>'
 
       + '<div class="card"><div class="sec-title mt0">常见问题</div>'
       + '<details class="acc"><summary>记录会不会自己消失？</summary><div class="acc-body">记录存在这台手机的浏览器里（localStorage）。iOS 的 Safari 对「长期不打开的网站」可能清理本地存储（约 7 天不用），<b>从主屏幕图标打开的 App 一般不受影响</b>，但保险起见，建议隔一段时间用「设置 → 导出练习记录」存一份到「文件」App；自己导入的题库也用「题库管理 → 导出」备份。</div></details>'
       + '<details class="acc"><summary>换手机 / 换浏览器后记录没了？</summary><div class="acc-body">记录存在浏览器本地。请在旧设备用「设置 → 导出练习记录」保存 JSON，再在新设备导入题库即可；错题信息会随记录一起走，但需要题库 ID 一致。</div></details>'
       + '<details class="acc"><summary>离线能用吗？</summary><div class="acc-body">通过 https 网址打开过一次后，Service Worker 会把页面和题库缓存下来，之后断网也能刷。注意必须用 Safari 打开过至少一次。</div></details>'
-      + '<details class="acc"><summary>怎么更新题目？</summary><div class="acc-body">导入同 ID 的题目会直接覆盖旧题。想批量替换，就在 JSON 里用和内置题相同的 id（例如 LX-001）。</div></details>'
+      + '<details class="acc"><summary>怎么更新题目？</summary><div class="acc-body">导入 <b>id 相同</b>的题目会直接覆盖旧题。想批量替换，就让新题的 id 与旧题保持一致；自己命题时 id 可以随意指定，不写的话 App 会用题干自动生成一个固定值（同一道题重复粘贴不会变成两道）。</div></details>'
       + '</div>';
   }
 

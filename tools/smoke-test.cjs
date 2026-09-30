@@ -31,6 +31,91 @@ function ok(name, cond, extra) {
 
 function section(t) { console.log('\n== ' + t); }
 
+/* ---------------------------------------------------------------------------
+ * 测试专用固定题库
+ *
+ * 通过 localStorage 的 pq.custom.v1 注入（见下面的 beforeParse），而不是依赖
+ * data/bank-*.json 的内容。这样即使内置题库被清空、或者以后换了一整套新题，
+ * 本测试依然能完整跑通「组卷 → 答题 → 判分 → 成绩单 → 错题本 → 收藏 → 统计」。
+ * 5 道题分别覆盖 5 个知识点，单选/多选都有。
+ * ------------------------------------------------------------------------- */
+const FIXTURE = [
+  {
+    id: 'FIX-001', topic: '力学', tags: ['匀变速直线运动'], type: 'single',
+    stem: '【冒烟测试】一物体做匀加速直线运动，初速度为 2 m/s，加速度为 3 m/s²，则 1 s 末它的速度为',
+    options: [
+      { key: 'A', text: '3 m/s' }, { key: 'B', text: '5 m/s' },
+      { key: 'C', text: '6 m/s' }, { key: 'D', text: '8 m/s' }
+    ],
+    answer: ['B'],
+    explanation: '由 v = v₀ + at = 2 m/s + 3 m/s² × 1 s = 5 m/s。',
+    source: '冒烟测试固定题', sourceType: '自编', difficulty: 1
+  },
+  {
+    id: 'FIX-002', topic: '力学', tags: ['牛顿第一定律', '惯性'], type: 'multiple',
+    stem: '【冒烟测试】关于惯性，下列说法正确的是',
+    options: [
+      { key: 'A', text: '一切物体都有惯性' },
+      { key: 'B', text: '力是维持物体运动的原因' },
+      { key: 'C', text: '惯性的大小只由质量决定' },
+      { key: 'D', text: '惯性是一种力，方向与运动方向相反' }
+    ],
+    answer: ['A', 'C'],
+    explanation: '惯性是物体的固有属性，一切物体都有；质量是惯性大小的唯一量度。力是改变运动状态的原因，惯性也不是力。',
+    source: '冒烟测试固定题', sourceType: '自编', difficulty: 2
+  },
+  {
+    id: 'FIX-003', topic: '电磁学', tags: ['库仑定律'], type: 'single',
+    stem: '【冒烟测试】两个点电荷之间的库仑力为 F，若保持电荷量不变、把它们之间的距离变为原来的 2 倍，则库仑力变为',
+    options: [
+      { key: 'A', text: '2F' }, { key: 'B', text: '4F' },
+      { key: 'C', text: 'F/4' }, { key: 'D', text: 'F/2' }
+    ],
+    answer: ['C'],
+    explanation: '由 F = kq₁q₂/r² 可知力与距离的平方成反比，距离变为 2 倍则力变为 1/4。',
+    source: '冒烟测试固定题', sourceType: '自编', difficulty: 1
+  },
+  {
+    id: 'FIX-004', topic: '热学', tags: ['内能', '温度'], type: 'single',
+    stem: '【冒烟测试】关于物体的内能，下列说法正确的是',
+    options: [
+      { key: 'A', text: '温度高的物体内能一定大' },
+      { key: 'B', text: '0 ℃ 的冰内能为零' },
+      { key: 'C', text: '物体温度不变，内能就一定不变' },
+      { key: 'D', text: '物体的内能与温度和体积都有关' }
+    ],
+    answer: ['D'],
+    explanation: '内能由分子动能和分子势能共同决定，与温度、体积（分子间距离）都有关。冰在 0 ℃ 也有内能；晶体熔化时温度不变而内能增大。',
+    source: '冒烟测试固定题', sourceType: '自编', difficulty: 2
+  },
+  {
+    id: 'FIX-005', topic: '光学', tags: ['折射', '波长'], type: 'single',
+    stem: '【冒烟测试】一束单色光从空气斜射入水中，下列说法正确的是',
+    options: [
+      { key: 'A', text: '频率不变，波长变短' },
+      { key: 'B', text: '频率变小，波长不变' },
+      { key: 'C', text: '频率不变，波长变长' },
+      { key: 'D', text: '频率变大，波长变短' }
+    ],
+    answer: ['A'],
+    explanation: '光的频率由光源决定，进入介质后频率不变；波速 v = c/n 变小，由 λ = v/f 知波长变短。',
+    source: '冒烟测试固定题', sourceType: '自编', difficulty: 2
+  },
+  {
+    id: 'FIX-006', topic: '近代物理', tags: ['光电效应'], type: 'multiple',
+    stem: '【冒烟测试】关于光电效应，下列说法正确的是',
+    options: [
+      { key: 'A', text: '入射光越强，光电子的最大初动能就越大' },
+      { key: 'B', text: '存在截止频率，低于它时无论光多强都不发生光电效应' },
+      { key: 'C', text: '光电子的最大初动能与入射光的强度成正比' },
+      { key: 'D', text: '金属的逸出功与入射光的频率无关' }
+    ],
+    answer: ['B', 'D'],
+    explanation: '由 Ek = hν − W₀ 知最大初动能只与入射光频率有关，与光强无关；逸出功是金属的固有属性。低于截止频率时不发生光电效应。',
+    source: '冒烟测试固定题', sourceType: '自编', difficulty: 3
+  }
+];
+
 (async function main() {
   // 先确认预览服务器在跑，否则给出清楚的提示而不是一堆堆栈
   try {
@@ -47,6 +132,9 @@ function section(t) { console.log('\n== ' + t); }
     resources: 'usable',
     pretendToBeVisual: true,
     beforeParse(window) {
+      // 先注入测试固定题库，让下面的流程测试与内置题库内容解耦
+      try { window.localStorage.setItem('pq.custom.v1', JSON.stringify(FIXTURE)); }
+      catch (e) { /* 失败时「固定题库已注入」那条断言会给出明确报错 */ }
       window.addEventListener('error', function (e) {
         pageErrors.push(String((e && (e.error && e.error.stack || e.message)) || 'unknown error'));
       });
@@ -80,6 +168,20 @@ function section(t) { console.log('\n== ' + t); }
   const tab = function (t) { return doc.querySelector('.tab[data-tab="' + t + '"]'); };
   const title = function () { return $('#viewTitle').textContent; };
   const viewText = function () { return $('#view').textContent; };
+  // 读首页大数字卡片（.hero-stat）里的值，按标签取
+  const heroStat = function (label) {
+    const el = $$('.hero-stat').filter(function (s) {
+      return s.querySelector('span') && s.querySelector('span').textContent === label;
+    })[0];
+    return el ? el.querySelector('b').textContent : null;
+  };
+  // 读统计/题库页小卡片（.stat）里的值，按标签取
+  const statValue = function (label) {
+    const el = $$('.stat').filter(function (s) {
+      return s.querySelector('span') && s.querySelector('span').textContent === label;
+    })[0];
+    return el ? el.querySelector('b').textContent : null;
+  };
   // 每次都要重新查询：视图重渲染后旧引用会失效
   const setCount = function (n) {
     if (!$('#setCount')) click(byView('setup'));   // 不在组卷页时才进入
@@ -89,12 +191,15 @@ function section(t) { console.log('\n== ' + t); }
   };
 
   section('启动与题库加载');
-  ok('window.PHYSICS_BANK 已定义', Array.isArray(window.PHYSICS_BANK));
-  const total = window.PHYSICS_BANK ? window.PHYSICS_BANK.length : 0;
-  ok('题库题数 ≥ 100（实际 ' + total + '）', total >= 100);
-  ok('每个知识点都有题', ['力学', '电磁学', '热学', '光学', '近代物理']
-    .every(function (t) { return window.PHYSICS_BANK.some(function (q) { return q.topic === t; }); }));
-  ok('首页渲染出题库总数 ' + total, viewText().indexOf(String(total)) >= 0);
+  ok('window.PHYSICS_BANK 已定义且是数组', Array.isArray(window.PHYSICS_BANK));
+  const builtinN = window.PHYSICS_BANK ? window.PHYSICS_BANK.length : 0;
+  ok('内置题库已清空（实际 ' + builtinN + ' 题）', builtinN === 0);
+  const BANK = JSON.parse(window.localStorage.getItem('pq.custom.v1') || '[]');
+  ok('测试固定题库已注入 ' + FIXTURE.length + ' 题（实际 ' + BANK.length + '）', BANK.length === FIXTURE.length);
+  ok('固定题库覆盖 5 个知识点', ['力学', '电磁学', '热学', '光学', '近代物理']
+    .every(function (t) { return BANK.some(function (q) { return q.topic === t; }); }));
+  ok('首页显示题库总题数 ' + BANK.length, heroStat('题库总题数') === String(BANK.length),
+    '实际：' + heroStat('题库总题数'));
   ok('首页有「随机组卷」入口', !!byView('setup'));
   ok('底部导航有 4 个标签', $$('.tab').length === 4);
 
@@ -115,7 +220,7 @@ function section(t) { console.log('\n== ' + t); }
     const stemEl = $('.stem');
     if (!stemEl) break;
     const stem = stemEl.textContent;
-    const q = window.PHYSICS_BANK.filter(function (x) { return x.stem === stem; })[0];
+    const q = BANK.filter(function (x) { return x.stem === stem; })[0];
     ok('第 ' + (i + 1) + ' 题能在题库中匹配到', !!q);
     if (!q) break;
     // 按 answer 里的字母点选（打乱顺序后 key 仍保留）
@@ -151,7 +256,7 @@ function section(t) { console.log('\n== ' + t); }
   for (let i = 0; i < 2; i++) {
     const stemEl = $('.stem');
     if (!stemEl) break;
-    const q = window.PHYSICS_BANK.filter(function (x) { return x.stem === stemEl.textContent; })[0];
+    const q = BANK.filter(function (x) { return x.stem === stemEl.textContent; })[0];
     // 故意选一个错项
     const wrongKey = ['A', 'B', 'C', 'D'].filter(function (k) { return q.answer.indexOf(k) < 0; })[0];
     click($$('.opt').filter(function (b) { return b.querySelector('.opt-key').textContent === wrongKey; })[0]);
@@ -190,7 +295,9 @@ function section(t) { console.log('\n== ' + t); }
   click(byView('bank'));
   ok('进入题库管理', title() === '题库管理');
   ok('显示导入区', !!$('#importArea'));
-  const before = window.PHYSICS_BANK.length;
+  const beforeTotal = BANK.length;   // 导入前可用题数（内置 0 + 固定题库）
+  ok('导入前「当前可用题数」为 ' + beforeTotal, statValue('当前可用题数') === String(beforeTotal),
+    '实际：' + statValue('当前可用题数'));
 
   // 合法导入
   const newQ = [{
@@ -202,10 +309,12 @@ function section(t) { console.log('\n== ' + t); }
   $('#importArea').value = JSON.stringify(newQ);
   click(byAct('import-text'));
   const saved = JSON.parse(window.localStorage.getItem('pq.custom.v1') || '[]');
-  ok('自定义题库已写入 localStorage', saved.length === 1 && saved[0].id === 'TEST-001');
-  ok('导入后当前可用题数为 101（原 ' + before + '）', viewText().indexOf('101') >= 0,
-    '题库管理页文本：' + viewText().slice(0, 90));
-  const tq = saved[0];
+  const tq = saved.filter(function (q) { return q.id === 'TEST-001'; })[0];
+  ok('自定义题库已写入 localStorage（' + saved.length + ' 题 = 固定题库 ' + FIXTURE.length + ' + 新导入 1）',
+    saved.length === FIXTURE.length + 1 && !!tq, '实际 ' + saved.length + ' 题');
+  ok('导入后「当前可用题数」变为 ' + (beforeTotal + 1),
+    statValue('当前可用题数') === String(beforeTotal + 1),
+    '实际：' + statValue('当前可用题数'));
   ok('字符串数组选项被正确归一化',
     !!tq && tq.options.length === 4 && tq.options[2].key === 'C' && tq.options[2].text === '丙');
   ok('"AC" 紧凑写法被解析为多选答案',
@@ -317,7 +426,8 @@ function section(t) { console.log('\n== ' + t); }
   click(byView('help'));
   ok('进入使用说明', title() === '使用说明');
   ok('说明了如何加到主屏幕', viewText().indexOf('添加到主屏幕') >= 0);
-  ok('说明了真题为 0 题', viewText().indexOf('「真题」为 0 题') >= 0);
+  ok('说明了内置题库已清空', viewText().indexOf('内置题库已清空') >= 0,
+    '实际片段：' + viewText().slice(0, 80));
 
   section('整体健康度');
   const cssOnly = pageErrors.filter(function (e) { return !/Could not parse CSS|stylesheet/i.test(e); });

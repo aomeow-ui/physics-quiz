@@ -1,6 +1,6 @@
 /* Service Worker：让页面和题库离线可用
    策略：静态资源缓存优先（stale-while-revalidate），导航请求回退到缓存 */
-var VERSION = 'v1.0.0';
+var VERSION = 'v1.0.1';   // 改动资源后请把这里 +1，学生下次打开才会立刻拿到新题库而不是缓存里的旧题
 var CACHE = 'physics-quiz-' + VERSION;
 var ASSETS = [
   './',
